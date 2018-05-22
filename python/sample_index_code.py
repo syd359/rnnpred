@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 import re
+import time
 
 
 def sample_regen(num=3):
@@ -11,15 +12,16 @@ def sample_regen(num=3):
     '''
     import random
 
-    dirpath = os.path.dirname(__file__) + r'\..' + r'\data'
-    index_nav_wgt_path = dirpath + r'\index_nav_wgt.csv'
-    index_info_path = dirpath + r'\index_info.csv'
-
     cat_list = ['_10VOL', '_20VOL', '_30VOL', '_40VOL', '_50VOL']
+
+    index_nav_wgt_path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'index_nav_wgt.csv')
+    index_info_path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'index_info.csv')
 
     index_nav_wgt = pd.read_csv(index_nav_wgt_path)
     index_info = pd.read_csv(index_info_path)
 
+    # len(index_nav_wgt['index_code'].str[:9].unique())
+    # 3470
     exchange_list = list(set(index_info.underlying_code))
     exchange_list = sorted(exchange_list)  # length = 3495
 
@@ -27,7 +29,57 @@ def sample_regen(num=3):
     target = random.sample(exchange_list, num)
     target_list = [x + y for x in target for y in cat_list]
 
+    start_time = time.time()
+    print('Start timing')
+
     df = pd.concat([index_nav_wgt[index_nav_wgt['index_code'] == x] for x in target_list])
+
+    # pd.to_datetime(df['trade_date'])
+    df['trade_date'] = pd.to_datetime(df['trade_date'], format='%Y%m%d')
+    df.reset_index(inplace=True)
+    print("The stock dataframe gen time --- {} seconds ---".format(time.time() - start_time))
+
+    res = data_gen(df)
+
+    return res
+
+
+def industry_gen(industry_list):
+    '''
+
+        :param num:
+        :return:
+        '''
+    cat_list = ['_10VOL', '_20VOL', '_30VOL', '_40VOL', '_50VOL']
+
+    print('Start to read dataframe')
+    start_time = time.time()
+    print('Start timing the read df time')
+
+    # Read in the data files
+    index_nav_wgt_path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'index_nav_wgt.csv')
+    # index_info_path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'index_info.csv')
+    citic_industry_path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'citic_industry.csv')
+
+    index_nav_wgt = pd.read_csv(index_nav_wgt_path)
+    # index_info = pd.read_csv(index_info_path)
+    citic_industry = pd.read_csv(citic_industry_path)
+
+    print("The read df time --- {} seconds ---".format(time.time() - start_time))
+
+    # concat the target industry stocks code to a list
+    stock_in_industry = list(pd.concat([citic_industry[citic_industry['citic'] == el] for el in industry_list])['stock'])
+
+    print('The stocks selected are:{}'.format(stock_in_industry))
+
+    target_list = [x + y for x in stock_in_industry for y in cat_list]
+
+    start_time = time.time()
+    print('Start timing the concat stocks df time')
+
+    df = pd.concat([index_nav_wgt[index_nav_wgt['index_code'] == x] for x in target_list])
+
+    print("The read df time --- {} seconds ---".format(time.time() - start_time))
 
     # pd.to_datetime(df['trade_date'])
     df['trade_date'] = pd.to_datetime(df['trade_date'], format='%Y%m%d')
@@ -38,8 +90,30 @@ def sample_regen(num=3):
     return res
 
 
+def whole_stocks_gen():
+    '''
+    Directly read dataframe from the 'reformated_whole_stock.csv'
+    '''
+
+    # reformated_whole_stock_path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'reformated_whole_stock.csv')
+    # reformated_whole_stock = pd.read_csv(reformated_whole_stock_path)
+    #
+    # return reformated_whole_stock
+
+    index_nav_wgt_path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'index_nav_wgt.csv')
+    # index_nav_wgt_path = r'C:\Users\syd13065\PycharmProjects\rnnnav\data\index_nav_wgt.csv'
+    index_nav_wgt = pd.read_csv(index_nav_wgt_path)
+
+    index_nav_wgt['trade_date'] = pd.to_datetime(index_nav_wgt['trade_date'], format='%Y%m%d')
+    res = data_gen(index_nav_wgt)
+
+    return res
+
+
 def data_gen(target):
     # target_list = sorted(list(set(target['index_code'])))
+    print('Start to reformat the dataframe')
+
 
     df1 = target[target.index_code.str.contains('_10VOL')].reset_index()
     df1['10VOL'] = df1.nav
@@ -57,6 +131,7 @@ def data_gen(target):
     df5['50VOL'] = df5.nav
 
     df = pd.concat([df1, df2, df3, df4, df5], axis=1)
+    print('Dataframe concat is done')
 
     # only select the not duplicated columns
     df = df.loc[:, ~df.columns.duplicated()]
@@ -70,6 +145,9 @@ def data_gen(target):
     return df
 
 
+
 if __name__ == "__main__":
     res = sample_regen(3)
+    # res = industry_gen(['b101', 'b102'])
+    # res = whole_stocks_gen()
     print(res)
