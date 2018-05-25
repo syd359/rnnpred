@@ -75,14 +75,6 @@ class StockRNN(object):
               len(training_data[training_data['diff'] < 0]))
         print(len(test_data), len(test_data[test_data['diff'] >= 0]), len(test_data[test_data['diff'] < 0]))
 
-        # self.train_x = np.ones(shape=(1000,200,6))
-        # extra = np.zeros(shape=(1000, 200, 6))
-        # self.train_x = np.append(self.train_x, extra)
-        # self.train_x = self.train_x.reshape(2000, 200, 6)
-        # self.train_y = np.ones(shape=(2000,1))
-        # self.test_x = np.ones(shape=(500,200,6))
-        # self.test_y = np.ones(shape=(500,1))
-
         self.train_x = np.array([])
         self.train_y = np.array([])
         self.test_x = np.array([])
@@ -94,9 +86,6 @@ class StockRNN(object):
         print('Generating matrix data')
         start_time = time.time()
         print('Start timing generating matrix data time')
-
-        # for code in self.stock_code:
-        #     df = df[df['index_code'] == code]
 
         for code in self.stock_code:
             df = training_data[training_data['index_code'] == code]
@@ -160,9 +149,6 @@ class StockRNN(object):
 
         # MAPE = tf.reduce_mean(tf.abs(tf.div((self.Y - y_hat), self.Y)))
         RMSE = tf.sqrt(tf.reduce_mean(tf.square(self.Y - y_hat)))
-
-
-        # saver = tf.train.Saver(tf.global_variables())
 
         batch_size = 200
 

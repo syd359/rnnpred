@@ -4,7 +4,7 @@ import numpy as np
 import os
 import time
 
-from sample_index_code import sample_regen, industry_gen, whole_stocks_gen
+from sample_index_code import sample_regen
 from data_logger import get_logger
 
 
@@ -16,6 +16,15 @@ class StockRNN(object):
         self.hidde_layer_size = hidden_layer_size
         self.batch_id = 0
 
+    def random_next_batch(self, x, y, batch_size):
+        '''
+        Return a random indexed batch
+        '''
+        indeces = np.random.randint(0, len(x), batch_size)
+        batch_x = x[indeces]
+        batch_y = y[indeces]
+        return batch_x, batch_y
+
     def next_batch(self, x, y, batch_size):
         """ Return a batch of data. When dataset end is reached, start over.
         """
@@ -26,28 +35,15 @@ class StockRNN(object):
         self.batch_id = min(self.batch_id + batch_size, len(x))
         return batch_x, batch_y
 
-    def random_next_batch(self, x, y, batch_size):
-        '''
-        Return a random indexed batch
-        '''
-        indeces = np.random.randint(0, len(x), batch_size)
-        batch_x = x[indeces]
-        batch_y = y[indeces]
-        return batch_x, batch_y
-
     def _read_stock_data(self):
         '''
         df columns:
         index_code	    trade_date	nav_base	10VOL	20VOL	30VOL	40VOL	50VOL   diff
         002264.SZ	  2011-01-28	1.0000	    1.0000	1.0000	1.0000	1.0000	1.0000  NaN
         '''
-        # num = 20
+        # num = 3
         # df = sample_regen(num)
-        df = industry_gen(['b101', 'b102'])
-        # df = whole_stocks_gen()
-
-        # filepath = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'output.xlsx')
-        # df = pd.read_excel(filepath)
+        df = pd.read_excel(r'C:\Users\syd13065\PycharmProjects\rnnnav\data\output.xlsx')
 
         train_test_split_date = '2015-08-01'
 
@@ -70,11 +66,6 @@ class StockRNN(object):
         # [['nav_base', '10VOL', '20VOL', '30VOL', '40VOL', '50VOL', 'diff']]
         training_data, test_data = self._read_stock_data()
 
-        print('\n')
-        print(len(training_data), len(training_data[training_data['diff'] >= 0]),
-              len(training_data[training_data['diff'] < 0]))
-        print(len(test_data), len(test_data[test_data['diff'] >= 0]), len(test_data[test_data['diff'] < 0]))
-
         self.train_x = np.array([])
         self.train_y = np.array([])
         self.test_x = np.array([])
@@ -82,17 +73,10 @@ class StockRNN(object):
         self.test_y_date = []
         self.test_y_index_code = []
 
-        print('\n')
         print('Generating matrix data')
-        start_time = time.time()
-        print('Start timing generating matrix data time')
-
-        # for code in self.stock_code:
-        #     df = df[df['index_code'] == code]
 
         for code in self.stock_code:
             df = training_data[training_data['index_code'] == code]
-            # train_x = np.asmatrix(df[['nav_base', '10VOL', '20VOL', '30VOL', '40VOL', '50VOL']])
             train_x = np.asmatrix(df[['nav_base']])
             train_y = np.asmatrix(df[['diff']])
             for i in range(len(df) - self.seq_size + 1):
@@ -101,7 +85,6 @@ class StockRNN(object):
 
         for code in self.stock_code:
             df = test_data[test_data['index_code'] == code]
-            # test_x = np.asmatrix(df[['nav_base', '10VOL', '20VOL', '30VOL', '40VOL', '50VOL']])
             test_x = np.asmatrix(df[['nav_base']])
             test_y = np.asmatrix(df[['diff']])
             for i in range(len(df) - self.seq_size + 1):
@@ -115,7 +98,8 @@ class StockRNN(object):
         self.train_y = self.train_y.reshape((-1, 1))
         self.test_y = self.test_y.reshape((-1, 1))
 
-        print("The generating matrix data time --- {} seconds ---".format(time.time() - start_time))
+
+
         print(self.train_x.shape, self.train_y.shape, self.test_x.shape, self.test_y.shape)
         print(len(self.test_y_date))
 
@@ -128,7 +112,7 @@ class StockRNN(object):
         W = tf.Variable(tf.random_normal([self.hidde_layer_size, 1]), name='W')
         b = tf.Variable(tf.random_normal([1]), name='b')
         with tf.variable_scope('cell'):
-            cell = tf.contrib.rnn.LSTMCell(self.hidde_layer_size)
+            cell = tf.contrib.rnn.BasicRNNCell(self.hidde_layer_size)
         with tf.variable_scope('rnn'):
             x = tf.unstack(self.X, self.seq_size, 1)
             outputs, states = tf.nn.static_rnn(cell, x, dtype=tf.float32)
@@ -146,11 +130,11 @@ class StockRNN(object):
         self._data_prepare()
 
         loss = tf.losses.mean_squared_error(self.Y, y_hat)
-        class_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-            labels=tf.cast(self.Y > 0, tf.float32), logits=tf.cast(y_hat > 0, tf.float32)))
+        class_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.cast(self.Y > 0, tf.float32),
+            logits=tf.cast(y_hat > 0, tf.float32)))
 
-        total_loss = loss + class_loss*0.1 # default is 0.1
-        train_optim = tf.train.AdamOptimizer(learning_rate=0.001).minimize(total_loss) # default lr is 0.001
+        total_loss = loss + class_loss * 0.1  # default is 0.1
+        train_optim = tf.train.AdamOptimizer(learning_rate=0.001).minimize(total_loss)  # default lr is 0.001
 
         # MAPE = tf.reduce_mean(tf.abs(tf.div((self.Y - y_hat), self.Y)))
         RMSE = tf.sqrt(tf.reduce_mean(tf.square(self.Y - y_hat)))
@@ -163,12 +147,15 @@ class StockRNN(object):
             for step in range(3000):
                 x_batch, y_batch = self.random_next_batch(self.train_x, self.train_y, batch_size)
                 feed_dict = {self.X: x_batch, self.Y: y_batch}
-                _, train_loss, train_class_loss, train_total_loss, rmse = sess.run([train_optim, loss, class_loss, total_loss, RMSE], feed_dict=feed_dict)
+                _, train_loss, train_class_loss, train_total_loss, rmse = sess.run(
+                    [train_optim, loss, class_loss, total_loss, RMSE], feed_dict=feed_dict)
                 # _, train_loss = sess.run([train_optim,loss], feed_dict=feed_dict)
                 if step % 50 == 0:
-                    print("Step: {0}, regression loss: {1}, class loss: {2}, total_loss: {3}, RMSE: {4}".format(step, train_loss, train_class_loss, train_total_loss,
-                                                                                       rmse))
-                    # saver.save(sess, save_path=os.path.dirname(__file__))
+                    print("Step: {0}, regression loss: {1}, class loss: {2}, total_loss: {3}, RMSE: {4}".format(step,
+                                                                                                                train_loss,
+                                                                                                                train_class_loss,
+                                                                                                                train_total_loss,
+                                                                                                                rmse))
 
             test_loss = sess.run(total_loss, feed_dict={self.X: self.test_x, self.Y: self.test_y})
             print("test loss: {}".format(test_loss))
@@ -180,17 +167,17 @@ class StockRNN(object):
                 {'stock_code': self.test_y_index_code, 'date': self.test_y_date, 'predictions': predictions},
                 columns=['stock_code', 'date', 'predictions'])
 
-            writer = pd.ExcelWriter('lstm_pred_nav_alone_2_industry.xlsx')
+            writer = pd.ExcelWriter('lstm_pred_nav_alone_sample_3.xlsx')
             pred_df.to_excel(writer, 'Sheet1')
             writer.save()
-            print('\n')
-            # print(pred_df.head(50))
+            # print(pred_df)
             print(len(pred_df), len(pred_df[pred_df['predictions'] >= 0]), len(pred_df[pred_df['predictions'] < 0]))
 
 
 if __name__ == "__main__":
     stock = StockRNN()
 
+    print('Start timing')
     start_time = time.time()
     stock.train_pred_rnn()
-    print('The total time is ----- {} ----- seconds'.format(time.time() - start_time))
+    print("Total time ")

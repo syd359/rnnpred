@@ -4,6 +4,14 @@ import re
 import time
 
 
+CAT_LIST = ['_10VOL', '_20VOL', '_30VOL', '_40VOL', '_50VOL']
+BREAK_LINE = '----------------------------------------------------------------------------------'
+
+def data_file_path(filename):
+    path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', filename)
+    return path
+
+
 def sample_regen(num=3):
     '''
 
@@ -12,10 +20,10 @@ def sample_regen(num=3):
     '''
     import random
 
-    cat_list = ['_10VOL', '_20VOL', '_30VOL', '_40VOL', '_50VOL']
-
-    index_nav_wgt_path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'index_nav_wgt.csv')
-    index_info_path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'index_info.csv')
+    # index_nav_wgt_path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'index_nav_wgt.csv')
+    index_nav_wgt_path = data_file_path('index_nav_wgt.csv')
+    # index_info_path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'index_info.csv')
+    index_info_path = data_file_path('index_info.csv')
 
     index_nav_wgt = pd.read_csv(index_nav_wgt_path)
     index_info = pd.read_csv(index_info_path)
@@ -27,12 +35,14 @@ def sample_regen(num=3):
 
     # random sample the given num stock codes
     target = random.sample(exchange_list, num)
-    target_list = [x + y for x in target for y in cat_list]
+    target_list = [x + y for x in target for y in CAT_LIST]
 
+    print(BREAK_LINE)
     start_time = time.time()
     print('Start timing')
 
-    df = pd.concat([index_nav_wgt[index_nav_wgt['index_code'] == x] for x in target_list])
+    df_cat_list= [index_nav_wgt[index_nav_wgt['index_code'] == x] for x in target_list]
+    df = pd.concat(df_cat_list)
 
     # pd.to_datetime(df['trade_date'])
     df['trade_date'] = pd.to_datetime(df['trade_date'], format='%Y%m%d')
@@ -50,16 +60,16 @@ def industry_gen(industry_list):
         :param num:
         :return:
         '''
-    cat_list = ['_10VOL', '_20VOL', '_30VOL', '_40VOL', '_50VOL']
-
     print('Start to read dataframe')
     start_time = time.time()
     print('Start timing the read df time')
 
     # Read in the data files
-    index_nav_wgt_path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'index_nav_wgt.csv')
-    # index_info_path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'index_info.csv')
-    citic_industry_path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'citic_industry.csv')
+    # make a func
+    # index_nav_wgt_path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'index_nav_wgt.csv')
+    index_nav_wgt_path = data_file_path('index_nav_wgt.csv')
+    # citic_industry_path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'citic_industry.csv')
+    citic_industry_path = data_file_path('citic_industry.csv')
 
     index_nav_wgt = pd.read_csv(index_nav_wgt_path)
     # index_info = pd.read_csv(index_info_path)
@@ -68,16 +78,19 @@ def industry_gen(industry_list):
     print("The read df time --- {} seconds ---".format(time.time() - start_time))
 
     # concat the target industry stocks code to a list
-    stock_in_industry = list(pd.concat([citic_industry[citic_industry['citic'] == el] for el in industry_list])['stock'])
+    cat_list = [citic_industry[citic_industry['citic'] == el] for el in industry_list]
+    stock_in_industry = list(pd.concat(cat_list)['stock'])
 
     print('The stocks selected are:{}'.format(stock_in_industry))
 
-    target_list = [x + y for x in stock_in_industry for y in cat_list]
+    target_list = [x + y for x in stock_in_industry for y in CAT_LIST]
 
+    print(BREAK_LINE)
     start_time = time.time()
     print('Start timing the concat stocks df time')
 
-    df = pd.concat([index_nav_wgt[index_nav_wgt['index_code'] == x] for x in target_list])
+    df_cat_list = [index_nav_wgt[index_nav_wgt['index_code'] == x] for x in target_list]
+    df = pd.concat(df_cat_list)
 
     print("The read df time --- {} seconds ---".format(time.time() - start_time))
 
@@ -94,13 +107,8 @@ def whole_stocks_gen():
     '''
     Directly read dataframe from the 'reformated_whole_stock.csv'
     '''
-
-    # reformated_whole_stock_path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'reformated_whole_stock.csv')
-    # reformated_whole_stock = pd.read_csv(reformated_whole_stock_path)
-    #
-    # return reformated_whole_stock
-
-    index_nav_wgt_path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'index_nav_wgt.csv')
+    # index_nav_wgt_path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'index_nav_wgt.csv')
+    index_nav_wgt_path = data_file_path('index_nav_wgt.csv')
     # index_nav_wgt_path = r'C:\Users\syd13065\PycharmProjects\rnnnav\data\index_nav_wgt.csv'
     index_nav_wgt = pd.read_csv(index_nav_wgt_path)
 
@@ -113,7 +121,6 @@ def whole_stocks_gen():
 def data_gen(target):
     # target_list = sorted(list(set(target['index_code'])))
     print('Start to reformat the dataframe')
-
 
     df1 = target[target.index_code.str.contains('_10VOL')].reset_index()
     df1['10VOL'] = df1.nav

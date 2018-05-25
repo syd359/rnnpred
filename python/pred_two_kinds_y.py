@@ -8,13 +8,17 @@ from sample_index_code import sample_regen, industry_gen, whole_stocks_gen
 from data_logger import get_logger
 
 
+THREE_SELECTED_STOCKS_PATH = r'C:\Users\syd13065\PycharmProjects\rnnnav\data\output.xlsx'
+
+
+
 class StockRNN(object):
 
-    def __init__(self, seq_size=200, input_dimension=1, hidden_layer_size=128):
-        self.seq_size = seq_size
-        self.input_dimension = input_dimension
-        self.hidde_layer_size = hidden_layer_size
-        self.batch_id = 0
+    def __init__(self, seq_size=100, input_dimension=6, output_dimension=2, hidden_layer_size=128):
+        self.seq_size = seq_size # default is 200
+        self.input_dimension = input_dimension # default is 6
+        self.hidde_layer_size = hidden_layer_size # default is 128
+        self.output_dimension = output_dimension # default is 1
 
     def next_batch(self, x, y, batch_size):
         """ Return a batch of data. When dataset end is reached, start over.
@@ -41,13 +45,10 @@ class StockRNN(object):
         index_code	    trade_date	nav_base	10VOL	20VOL	30VOL	40VOL	50VOL   diff
         002264.SZ	  2011-01-28	1.0000	    1.0000	1.0000	1.0000	1.0000	1.0000  NaN
         '''
-        # num = 20
+        # num = 5
         # df = sample_regen(num)
-        df = industry_gen(['b101', 'b102'])
-        # df = whole_stocks_gen()
 
-        # filepath = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', 'output.xlsx')
-        # df = pd.read_excel(filepath)
+        df = pd.read_excel(THREE_SELECTED_STOCKS_PATH)
 
         train_test_split_date = '2015-08-01'
 
@@ -92,8 +93,7 @@ class StockRNN(object):
 
         for code in self.stock_code:
             df = training_data[training_data['index_code'] == code]
-            # train_x = np.asmatrix(df[['nav_base', '10VOL', '20VOL', '30VOL', '40VOL', '50VOL']])
-            train_x = np.asmatrix(df[['nav_base']])
+            train_x = np.asmatrix(df[['nav_base', '10VOL', '20VOL', '30VOL', '40VOL', '50VOL']])
             train_y = np.asmatrix(df[['diff']])
             for i in range(len(df) - self.seq_size + 1):
                 self.train_x = np.append(self.train_x, train_x[i:i + self.seq_size])
@@ -101,9 +101,8 @@ class StockRNN(object):
 
         for code in self.stock_code:
             df = test_data[test_data['index_code'] == code]
-            # test_x = np.asmatrix(df[['nav_base', '10VOL', '20VOL', '30VOL', '40VOL', '50VOL']])
-            test_x = np.asmatrix(df[['nav_base']])
-            test_y = np.asmatrix(df[['diff']])
+            test_x = np.asmatrix(df[['nav_base', '10VOL', '20VOL', '30VOL', '40VOL', '50VOL']])
+            test_y = np.asmatrix(df[['nav_base','diff']])
             for i in range(len(df) - self.seq_size + 1):
                 self.test_x = np.append(self.test_x, test_x[i:i + self.seq_size])
                 self.test_y = np.append(self.test_y, test_y[i + self.seq_size - 1])
@@ -122,11 +121,11 @@ class StockRNN(object):
     def _create_placeholders(self):
         with tf.name_scope('data'):
             self.X = tf.placeholder(tf.float32, [None, self.seq_size, self.input_dimension], name='X_input')
-            self.Y = tf.placeholder(tf.float32, [None, 1], name='Y_input')
+            self.Y = tf.placeholder(tf.float32, [None, self.output_dimension], name='Y_input')
 
     def _create_rnn(self):
-        W = tf.Variable(tf.random_normal([self.hidde_layer_size, 1]), name='W')
-        b = tf.Variable(tf.random_normal([1]), name='b')
+        W = tf.Variable(tf.random_normal([self.hidde_layer_size, self.output_dimension]), name='W')
+        b = tf.Variable(tf.random_normal([self.output_dimension]), name='b')
         with tf.variable_scope('cell'):
             cell = tf.contrib.rnn.LSTMCell(self.hidde_layer_size)
         with tf.variable_scope('rnn'):
@@ -147,13 +146,16 @@ class StockRNN(object):
 
         loss = tf.losses.mean_squared_error(self.Y, y_hat)
         class_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-            labels=tf.cast(self.Y > 0, tf.float32), logits=tf.cast(y_hat > 0, tf.float32)))
+            labels=tf.cast(self.Y > 0, tf.float32), logits=tf.cast(y_hat > 0, tf.float32))) # default is y_hat, no tf.cast
 
-        total_loss = loss + class_loss*0.1 # default is 0.1
+        total_loss = loss + class_loss*0.01 # default is 0.1
         train_optim = tf.train.AdamOptimizer(learning_rate=0.001).minimize(total_loss) # default lr is 0.001
 
         # MAPE = tf.reduce_mean(tf.abs(tf.div((self.Y - y_hat), self.Y)))
         RMSE = tf.sqrt(tf.reduce_mean(tf.square(self.Y - y_hat)))
+
+
+        # saver = tf.train.Saver(tf.global_variables())
 
         batch_size = 200
 
@@ -180,11 +182,10 @@ class StockRNN(object):
                 {'stock_code': self.test_y_index_code, 'date': self.test_y_date, 'predictions': predictions},
                 columns=['stock_code', 'date', 'predictions'])
 
-            writer = pd.ExcelWriter('lstm_pred_nav_alone_2_industry.xlsx')
+            writer = pd.ExcelWriter('lstm_pred_random_5.xlsx')
             pred_df.to_excel(writer, 'Sheet1')
             writer.save()
-            print('\n')
-            # print(pred_df.head(50))
+            # print(pred_df)
             print(len(pred_df), len(pred_df[pred_df['predictions'] >= 0]), len(pred_df[pred_df['predictions'] < 0]))
 
 
