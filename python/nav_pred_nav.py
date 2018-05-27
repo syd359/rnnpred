@@ -27,20 +27,20 @@ class StockRNN(object):
         return batch_x, batch_y
 
     def random_next_batch(self, x, y, batch_size):
-        '''
+        """
         Return a random indexed batch
-        '''
+        """
         indeces = np.random.randint(0, len(x), batch_size)
         batch_x = x[indeces]
         batch_y = y[indeces]
         return batch_x, batch_y
 
     def _read_stock_data(self):
-        '''
+        """
         df columns:
         index_code	    trade_date	nav_base	10VOL	20VOL	30VOL	40VOL	50VOL   diff
         002264.SZ	  2011-01-28	1.0000	    1.0000	1.0000	1.0000	1.0000	1.0000  NaN
-        '''
+        """
         # num = 20
         # df = sample_regen(num)
         df = industry_gen(['b101', 'b102'])

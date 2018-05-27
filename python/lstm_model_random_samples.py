@@ -7,9 +7,9 @@ import time
 from sample_index_code import sample_regen, industry_gen, whole_stocks_gen
 from data_logger import get_logger
 
-
 TRAIN_TEST_SPLIT_DATE = '2015-08-01'
 STEP = 3000
+
 
 class StockRNN(object):
 
@@ -21,13 +21,13 @@ class StockRNN(object):
                  learning_rate=0.001,
                  batch_size=200):
 
-        self.random_num = random_num # default is 3
-        self.seq_size = seq_size # default is 200
-        self.input_dimension = input_dimension # default is 6
-        self.output_dimension = output_dimension # default is 1
-        self.hidde_layer_size = hidden_layer_size # default is 128
+        self.random_num = random_num  # default is 3
+        self.seq_size = seq_size  # default is 200
+        self.input_dimension = input_dimension  # default is 6
+        self.output_dimension = output_dimension  # default is 1
+        self.hidde_layer_size = hidden_layer_size  # default is 128
         self.learning_rate = learning_rate
-        self.batch_size = batch_size # default is 200
+        self.batch_size = batch_size  # default is 200
 
     def random_next_batch(self, x, y, batch_size):
         '''
@@ -148,10 +148,12 @@ class StockRNN(object):
 
         loss = tf.losses.mean_squared_error(self.Y, y_hat)
         class_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-            labels=tf.cast(self.Y > 0, tf.float32), logits=tf.cast(y_hat > 0, tf.float32))) # default is y_hat, no tf.cast
+            labels=tf.cast(self.Y > 0, tf.float32),
+            logits=tf.cast(y_hat > 0, tf.float32)))  # default is y_hat, no tf.cast
 
-        total_loss = loss + class_loss*0.01 # default is 0.1
-        train_optim = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(total_loss) # default lr is 0.001
+        total_loss = loss + class_loss * 0.01  # default is 0.1
+        train_optim = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(
+            total_loss)  # default lr is 0.001
 
         # MAPE = tf.reduce_mean(tf.abs(tf.div((self.Y - y_hat), self.Y)))
         RMSE = tf.sqrt(tf.reduce_mean(tf.square(self.Y - y_hat)))
@@ -164,8 +166,9 @@ class StockRNN(object):
             for step in range(STEP):
                 x_batch, y_batch = self.random_next_batch(self.train_x, self.train_y, batch_size)
                 feed_dict = {self.X: x_batch, self.Y: y_batch}
-                _, train_loss, train_class_loss, train_total_loss, rmse = sess.run([train_optim, loss, class_loss, total_loss, RMSE],
-                                                                                   feed_dict=feed_dict)
+                _, train_loss, train_class_loss, train_total_loss, rmse = sess.run(
+                    [train_optim, loss, class_loss, total_loss, RMSE],
+                    feed_dict=feed_dict)
                 # _, train_loss = sess.run([train_optim,loss], feed_dict=feed_dict)
                 if step % 50 == 0:
                     print("Step: {0}, regression loss: {1}, class loss: {2}, total_loss: {3}, RMSE: {4}".format(step,

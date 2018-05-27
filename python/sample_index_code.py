@@ -3,9 +3,9 @@ import os
 import re
 import time
 
-
 CAT_LIST = ['_10VOL', '_20VOL', '_30VOL', '_40VOL', '_50VOL']
 BREAK_LINE = '----------------------------------------------------------------------------------'
+
 
 def data_file_path(filename):
     path = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data', filename)
@@ -41,7 +41,7 @@ def sample_regen(num=3):
     start_time = time.time()
     print('Start timing')
 
-    df_cat_list= [index_nav_wgt[index_nav_wgt['index_code'] == x] for x in target_list]
+    df_cat_list = [index_nav_wgt[index_nav_wgt['index_code'] == x] for x in target_list]
     df = pd.concat(df_cat_list)
 
     # pd.to_datetime(df['trade_date'])
@@ -150,7 +150,6 @@ def data_gen(target):
     df['diff'].fillna(0, inplace=True)
 
     return df
-
 
 
 if __name__ == "__main__":
